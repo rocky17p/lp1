@@ -3,13 +3,15 @@
 #include <thread>
 #include <chrono>
 using namespace std;
+using namespace chrono;
+using namespace this_thread;
 
 class Semaphore {
 public:
     int val;
     Semaphore(int v) { val = v; }
     void waitS() {
-        while (val <= 0) this_thread::yield();
+        while (val <= 0) yield();
         val--;
     }
     void signalS() {
@@ -60,14 +62,14 @@ public:
 void producerThread(ProducerConsumer &pc, int n) {
     for (int i = 1; i <= n; i++) {
         pc.produce(i);
-        this_thread::sleep_for(chrono::milliseconds(100)); 
+        sleep_for(milliseconds(100)); 
     }
 }
 
 void consumerThread(ProducerConsumer &pc, int n) {
     for (int i = 1; i <= n; i++) {
         pc.consume();
-        this_thread::sleep_for(chrono::milliseconds(300));
+        sleep_for(milliseconds(300));
     }
 }
 

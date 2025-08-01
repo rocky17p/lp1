@@ -94,7 +94,7 @@ int main() {
     int LC = 0;
 
     cout << "\n -- ASSEMBLER PASS-1 OUTPUT --\n";
-    cout << "\n <LABEL\tOPCODE\t\tOP1\t\tOP2\t\tLC\t\tINTERMEDIATE CODE>\n";
+    cout << "\n <LABEL\t\tOPCODE\t\tOP1\t\tOP2\tLC\t\tINTERMEDIATE CODE>\n";
 
     while (fin >> label >> opcode >> op1 >> op2) {
         int id = getOP(opcode);
@@ -110,7 +110,7 @@ int main() {
                 LC = stoi(op1);
                 IC += "(C," + op1 + ")";
             }
-            cout << "  " << label << "\t" << opcode << "\t\t" << op1 << "\t\t" << op2
+            cout << "  " << label << "\t\t" << opcode << "\t\t" << op1 << "\t\t" << op2
                  << "\t" << lc << "\t\t" << IC << endl;
             ic << lc << "\t" << IC << endl;
             continue;
@@ -139,32 +139,48 @@ int main() {
             else
                 LC = stoi(ST[getSymID(token1)].addr) - stoi(token2);
             IC += "(S,0" + to_string(ST[getSymID(token1)].no) + ")" + op + token2;
-            cout << "  " << label << "\t" << opcode << "\t\t" << op1 << "\t\t" << op2
+            cout << "  " << label << "\t\t" << opcode << "\t\t" << op1 << "\t\t" << op2
                  << "\t" << lc << "\t\t" << IC << endl;
             ic << lc << "\t" << IC << endl;
             continue;
         }
 
         // Handle EQU
+        // if (opcode == "EQU") {
+        //     if (presentST(label)) {
+        //         ST[getSymID(label)].addr = ST[getSymID(op1)].addr;
+        //     } else {
+        //         ST[scnt++] = {scnt, label, ST[getSymID(op1)].addr};
+        //     }
+        //     continue;
+        // }
+        // Handle EQU
         if (opcode == "EQU") {
+            string addr = ST[getSymID(op1)].addr;
             if (presentST(label)) {
-                ST[getSymID(label)].addr = ST[getSymID(op1)].addr;
+                ST[getSymID(label)].addr = addr;
             } else {
-                ST[scnt++] = {scnt, label, ST[getSymID(op1)].addr};
+                ST[scnt++] = {scnt, label, addr};
             }
+
+            IC += "(S,0" + to_string(ST[getSymID(op1)].no) + ")";
+            cout << "  " << label << "\t\t" << opcode << "\t\t" << op1 << "\t\t" << op2
+                << "\t" << lc << "\t\t" << IC << endl;
+            ic << lc << "\t" << IC << endl;
             continue;
         }
 
+
         // Handle LTORG and END
         if (opcode == "LTORG" || opcode == "END") {
-            cout << "  " << label << "\t" << opcode << "\t\t" << op1 << "\t\t" << op2
+            cout << "  " << label << "\t\t" << opcode << "\t\t" << op1 << "\t\t" << op2
                  << "\t" << lc << "\t\t" << IC << endl;
             ic << lc << "\t" << IC << endl;
             for (int i = lcnt - nlcnt; i < lcnt; ++i) {
                 lc = to_string(LC);
                 IC = "(DL,01)(C," + string(1, LT[i].lname[2]) + ")";
                 LT[i].addr = to_string(LC++);
-                cout << "\t\t\t\t\t" << lc << "\t\t" << IC << endl;
+                cout << "\t\t\t\t\t\t\t" << lc << "\t\t" << IC << endl;
                 ic << lc << "\t" << IC << endl;
             }
             if (nlcnt > 0)
@@ -180,10 +196,12 @@ int main() {
         if (opcode == "DS") {
             IC += "(C," + op1 + ")";
             LC += stoi(op1);
-        } else if (opcode == "DC") {
-            IC += "(C," + string(1, op1[1]) + ")";
+        }
+         else if (opcode == "DC") {
+            IC += "(C," + op1 + ")";
             LC++;
-        } else if (optab[id].mclass == "IS") {
+        } 
+        else if (optab[id].mclass == "IS") {
             if (op2 == "NAN") {
                 if (op1 != "NAN") {
                     if (!presentST(op1))
@@ -208,7 +226,7 @@ int main() {
             LC++;
         }
 
-        cout << "  " << label << "\t" << opcode << "\t\t" << op1 << "\t\t" << op2
+        cout << "  " << label << "\t\t" << opcode << "\t\t" << op1 << "\t\t" << op2
              << "\t" << lc << "\t\t" << IC << endl;
         ic << lc << "\t" << IC << endl;
     }

@@ -37,6 +37,7 @@ litTable LT[50];
 poolTable PT[50];
 
 int scnt = 0, lcnt = 0, nlcnt = 0, pcnt = 0;
+int poolStartIndex = 0; // Track new literal pools
 
 int getOP(string s) {
     for (int i = 0; i < 18; ++i)
@@ -74,8 +75,9 @@ int getSymID(string s) {
     return -1;
 }
 
-bool presentLT(string s) {
-    for (int i = 0; i < lcnt; ++i)
+// Only check current pool for duplicates
+bool presentLTCurrentPool(string s) {
+    for (int i = poolStartIndex; i < lcnt; ++i)
         if (LT[i].lname == s) return true;
     return false;
 }
@@ -86,6 +88,11 @@ int getLitID(string s) {
     return -1;
 }
 
+// Check if operand is a pure number (immediate constant)
+bool isNumber(const string &s) {
+    return !s.empty() && all_of(s.begin(), s.end(), ::isdigit);
+}
+
 int main() {
     ifstream fin("input3.txt");
     ofstream ic("ic.txt"), st("symtable.txt"), lt("littable.txt");
@@ -94,7 +101,7 @@ int main() {
     int LC = 0;
 
     cout << "\n -- ASSEMBLER PASS-1 OUTPUT --\n";
-    cout << "\n <LABEL\t\tOPCODE\t\tOP1\t\tOP2\tLC\t\tINTERMEDIATE CODE>\n";
+    cout << "\n<LABEL\t\tOPCODE\t\tOP1\t\tOP2\tLC\t\tINTERMEDIATE CODE>\n";
 
     while (fin >> label >> opcode >> op1 >> op2) {
         int id = getOP(opcode);
@@ -104,19 +111,19 @@ int main() {
 
         IC = "(" + optab[id].mclass + "," + optab[id].mnemonic + ")";
 
-        // Handle START
+        // START
         if (opcode == "START") {
             if (op1 != "NAN") {
                 LC = stoi(op1);
                 IC += "(C," + op1 + ")";
             }
-            cout << "  " << label << "\t\t" << opcode << "\t\t" << op1 << "\t\t" << op2
+            cout << label << "\t\t" << opcode << "\t\t" << op1 << "\t\t" << op2
                  << "\t" << lc << "\t\t" << IC << endl;
             ic << lc << "\t" << IC << endl;
             continue;
         }
 
-        // Update symbol table for labels (but don't add to IC)
+        // Label handling
         if (label != "NAN") {
             if (!presentST(label)) {
                 ST[scnt++] = {scnt, label, to_string(LC)};
@@ -125,7 +132,7 @@ int main() {
             }
         }
 
-        // Handle ORIGIN
+        // ORIGIN
         if (opcode == "ORIGIN") {
             string token1, token2;
             char op;
@@ -139,22 +146,13 @@ int main() {
             else
                 LC = stoi(ST[getSymID(token1)].addr) - stoi(token2);
             IC += "(S,0" + to_string(ST[getSymID(token1)].no) + ")" + op + token2;
-            cout << "  " << label << "\t\t" << opcode << "\t\t" << op1 << "\t\t" << op2
+            cout << label << "\t\t" << opcode << "\t\t" << op1 << "\t\t" << op2
                  << "\t" << lc << "\t\t" << IC << endl;
             ic << lc << "\t" << IC << endl;
             continue;
         }
 
-        // Handle EQU
-        // if (opcode == "EQU") {
-        //     if (presentST(label)) {
-        //         ST[getSymID(label)].addr = ST[getSymID(op1)].addr;
-        //     } else {
-        //         ST[scnt++] = {scnt, label, ST[getSymID(op1)].addr};
-        //     }
-        //     continue;
-        // }
-        // Handle EQU
+        // EQU
         if (opcode == "EQU") {
             string addr = ST[getSymID(op1)].addr;
             if (presentST(label)) {
@@ -162,18 +160,16 @@ int main() {
             } else {
                 ST[scnt++] = {scnt, label, addr};
             }
-
             IC += "(S,0" + to_string(ST[getSymID(op1)].no) + ")";
-            cout << "  " << label << "\t\t" << opcode << "\t\t" << op1 << "\t\t" << op2
-                << "\t" << lc << "\t\t" << IC << endl;
+            cout << label << "\t\t" << opcode << "\t\t" << op1 << "\t\t" << op2
+                 << "\t" << lc << "\t\t" << IC << endl;
             ic << lc << "\t" << IC << endl;
             continue;
         }
 
-
-        // Handle LTORG and END
+        // LTORG / END
         if (opcode == "LTORG" || opcode == "END") {
-            cout << "  " << label << "\t\t" << opcode << "\t\t" << op1 << "\t\t" << op2
+            cout << label << "\t\t" << opcode << "\t\t" << op1 << "\t\t" << op2
                  << "\t" << lc << "\t\t" << IC << endl;
             ic << lc << "\t" << IC << endl;
             for (int i = lcnt - nlcnt; i < lcnt; ++i) {
@@ -186,70 +182,72 @@ int main() {
             if (nlcnt > 0)
                 PT[pcnt++] = {pcnt + 1, "#" + to_string(LT[lcnt - nlcnt].no)};
             nlcnt = 0;
+            poolStartIndex = lcnt; // Start new pool
             if (opcode == "END") break;
             continue;
         }
 
         lc = to_string(LC);
 
-        // Generate IC for instructions
+        // DS
         if (opcode == "DS") {
             IC += "(C," + op1 + ")";
             LC += stoi(op1);
         }
-         else if (opcode == "DC") {
+        // DC
+        else if (opcode == "DC") {
             IC += "(C," + op1 + ")";
             LC++;
-        } 
+        }
+        // Imperative Statements
         else if (optab[id].mclass == "IS") {
-            if (op2 == "NAN") {
-                if (op1 != "NAN") {
-                    if (!presentST(op1))
-                        ST[scnt++] = {scnt, op1, "0"};
-                    IC += "(S,0" + to_string(ST[getSymID(op1)].no) + ")";
+            IC += (opcode == "BC") ? "(" + to_string(getConditionCode(op1)) + ")"
+                                   : "(" + to_string(getRegID(op1)) + ")";
+            // Operand 2 handling
+            if (op2[0] == '=') { // literal
+                if (!presentLTCurrentPool(op2)) { // check only current pool
+                    LT[lcnt++] = {lcnt, op2, "0"};
+                    nlcnt++;
                 }
-            } else {
-                IC += (opcode == "BC") ? "(" + to_string(getConditionCode(op1)) + ")"
-                                        : "(" + to_string(getRegID(op1)) + ")";
-                if (op2[0] == '=') {
-                    if (!presentLT(op2)) {
-                        LT[lcnt++] = {lcnt, op2, "0"};
-                        nlcnt++;
-                    }
-                    IC += "(L,0" + to_string(getLitID(op2)) + ")";
-                } else {
-                    if (!presentST(op2))
-                        ST[scnt++] = {scnt, op2, "0"};
-                    IC += "(S,0" + to_string(getSymID(op2)) + ")";
-                }
+                IC += "(L,0" + to_string(getLitID(op2)) + ")";
+            }
+            else if (isNumber(op2)) { // immediate constant
+                IC += "(C," + op2 + ")";
+            }
+            else if (op2 != "NAN") { // symbol
+                if (!presentST(op2))
+                    ST[scnt++] = {scnt, op2, "0"};
+                IC += "(S,0" + to_string(getSymID(op2)) + ")";
             }
             LC++;
         }
 
-        cout << "  " << label << "\t\t" << opcode << "\t\t" << op1 << "\t\t" << op2
+        cout << label << "\t\t" << opcode << "\t\t" << op1 << "\t\t" << op2
              << "\t" << lc << "\t\t" << IC << endl;
         ic << lc << "\t" << IC << endl;
     }
 
-    // Output tables
+    // Output Symbol Table
     cout << "\n----------------------------------------------------------------\n";
     cout << " -- SYMBOL TABLE --\n\n<NO.\tSYMBOL\tADDRESS>\n";
     for (int i = 0; i < scnt; ++i) {
-        cout << "  " << ST[i].no << "\t " << ST[i].sname << "\t  " << ST[i].addr << endl;
+        cout << ST[i].no << "\t " << ST[i].sname << "\t  " << ST[i].addr << endl;
         st << ST[i].no << "\t " << ST[i].sname << "\t  " << ST[i].addr << endl;
     }
 
+    // Output Literal Table
     cout << "\n----------------------------------------------------------------\n";
     cout << " -- LITERAL TABLE --\n\n<NO.\tLITERAL\tADDRESS>\n";
     for (int i = 0; i < lcnt; ++i) {
-        cout << "  " << LT[i].no << "\t " << LT[i].lname << "\t  " << LT[i].addr << endl;
+        cout << LT[i].no << "\t " << LT[i].lname << "\t  " << LT[i].addr << endl;
         lt << LT[i].no << "\t " << LT[i].lname << "\t  " << LT[i].addr << endl;
     }
 
+    // Output Pool Table
     cout << "\n----------------------------------------------------------------\n";
     cout << " -- POOL TABLE --\n\n<NO.\tLITERAL_NO.>\n";
     for (int i = 0; i < pcnt; ++i)
-        cout << "  " << PT[i].no << "\t   " << PT[i].lno << endl;
+        cout << PT[i].no << "\t   " << PT[i].lno << endl;
 
     return 0;
 }

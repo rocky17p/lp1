@@ -1,92 +1,73 @@
-#include <iostream>
-#include <queue>
-#include <thread>
-#include <chrono>
+#include<bits/stdc++.h>
 using namespace std;
 using namespace chrono;
 using namespace this_thread;
-
-class Semaphore {
-public:
+class semaphore{
+    public:
     int val;
-    Semaphore(int v) { val = v; }
-    void waitS() {
-        while (val <= 0) yield();
+    semaphore(int v){
+        val=v;
+    }
+    void wait(){
+        while(val<=0) yield();
         val--;
     }
-    void signalS() {
+    void signal(){
         val++;
     }
 };
-
-class ProducerConsumer {
-public:
-    int maxSize;
-    queue<int> buffer;
-    Semaphore E, F, S;
-
-    ProducerConsumer(int size) : E(size), F(0), S(1) {
-        maxSize = size;
+class ProducerConsumer{
+    public:
+    queue<int>buffer;
+    semaphore e,f,s;
+    int maxsize;
+    ProducerConsumer(int size):e(size),f(0),s(1){
+        maxsize=size;
     }
 
-    void produce(int item) {
-        if (E.val == 0)
-            cout << "[WAIT] Buffer full. Producer waiting...\n";
-
-        E.waitS();
-        S.waitS();
-
+    void produce(int item){
+        e.wait();
+        s.wait();
         buffer.push(item);
-        cout << "Produced: " << item << " | Buffer Size: " << buffer.size() << endl;
-
-        S.signalS();
-        F.signalS();
+        cout<<"Produced :"<<item<< "| Buffer Size :"<<buffer.size()<<endl;
+        f.signal();
+        s.signal();
     }
-
-    void consume() {
-        if (F.val == 0)
-            cout << "[WAIT] Buffer empty. Consumer waiting...\n";
-
-        F.waitS();
-        S.waitS();
-
-        int item = buffer.front();
+    void consume(){
+        f.wait();
+        s.wait();
+        int item=buffer.front();
         buffer.pop();
-        cout << "Consumed: " << item << " | Buffer Size: " << buffer.size() << endl;
-
-        S.signalS();
-        E.signalS();
+        cout<<"Consumed :"<<item<<" |Buffer Size :"<<buffer.size()<<endl;
+        e.signal();
+        s.signal();
     }
 };
 
-void producerThread(ProducerConsumer &pc, int n) {
-    for (int i = 1; i <= n; i++) {
-        pc.produce(i);
-        sleep_for(milliseconds(100)); 
+void producer(ProducerConsumer & pc ,int n){
+    for(int i=0;i<n;i++){
+        pc.produce(i+1);
+        sleep_for(milliseconds(100));
     }
 }
-
-void consumerThread(ProducerConsumer &pc, int n) {
-    for (int i = 1; i <= n; i++) {
+void consumer(ProducerConsumer & pc ,int n){
+    for(int i=0;i<n;i++){
         pc.consume();
         sleep_for(milliseconds(300));
     }
 }
 
-int main() {
-    int bufferSize, totalItems;
-    cout << "Enter buffer size: ";
-    cin >> bufferSize;
-    cout << "Enter how many items to produce/consume: ";
-    cin >> totalItems;
-
-    ProducerConsumer pc(bufferSize);
-
-    thread t1(producerThread, ref(pc), totalItems);
-    thread t2(consumerThread, ref(pc), totalItems);
-
+int main(){
+    int buffersize;
+    int total;
+    cout<<"enter buffer size"<<endl;
+    cin>>buffersize;
+    cout<<"enter total items to produce"<<endl;
+    cin>>total;
+    ProducerConsumer pc(buffersize);
+    thread t1(producer,ref(pc),total);
+    thread t2(consumer,ref(pc),total);
     t1.join();
     t2.join();
-
     return 0;
 }

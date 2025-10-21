@@ -1,158 +1,123 @@
 #include <bits/stdc++.h>
 using namespace std;
 
-// Represents a memory block (free block)
 struct Block {
     int size;
     int index;
     bool allocated = false;
 };
 
-// Represents a process needing memory
 struct Process {
     int id;
     int memory;
-    int allocatedBlockPos = -1;  // Store the position in blocks vector
+    int allocated = -1;
 };
 
-// First Fit Allocation
-void firstFit(vector<Block>& blocks, vector<Process>& processes) {
-    cout << "\nFirst Fit Allocation:\n";
-    for (auto& p : processes) {
-        p.allocatedBlockPos = -1;
-        for (int i = 0; i < (int)blocks.size(); ++i) {
-            if (!blocks[i].allocated && blocks[i].size >= p.memory) {
-                p.allocatedBlockPos = i;
-                blocks[i].allocated = true;
-                cout << "Process " << p.id << " allocated to Block of size " << blocks[i].size << "\n";
+void firstfit(vector<Block> &Blocks, vector<Process> &Processes) {
+    for (int i = 0; i < Processes.size(); i++) {
+        Processes[i].allocated = -1;
+        for (int j = 0; j < Blocks.size(); j++) {
+            if (!Blocks[j].allocated && Blocks[j].size >= Processes[i].memory) {
+                Processes[i].allocated = j;
+                Blocks[j].allocated = true;
+                cout << "Process " << Processes[i].id << " -> Block " << Blocks[j].index << " (" << Blocks[j].size << ")" << endl;
                 break;
             }
         }
-        if (p.allocatedBlockPos == -1) {
-            cout << "Process " << p.id << " not allocated\n";
-        }
+        if (Processes[i].allocated == -1)
+            cout << "Process " << Processes[i].id << " Unallocated" << endl;
     }
 }
 
-// Next Fit Allocation (no wrap-around)
-void nextFit(vector<Block>& blocks, vector<Process>& processes) {
-    cout << "\nNext Fit (No Wrap-Around) Allocation:\n";
-    int n = blocks.size();
-    int startIndex = 0;
-
-    for (auto& p : processes) {
-        p.allocatedBlockPos = -1;
-        bool allocated = false;
-
-        for (int i = startIndex; i < n; i++) {
-            if (!blocks[i].allocated && blocks[i].size >= p.memory) {
-                p.allocatedBlockPos = i;
-                blocks[i].allocated = true;
-                startIndex = i + 1;
-                allocated = true;
-                cout << "Process " << p.id << " allocated to Block of size " << blocks[i].size << "\n";
+void nextfit(vector<Block> &Blocks, vector<Process> &Processes) {
+    int startindex = 0;
+    for (int i = 0; i < Processes.size(); i++) {
+        Processes[i].allocated = -1;
+        for (int j = startindex; j < Blocks.size(); j++) {
+            if (!Blocks[j].allocated && Blocks[j].size >= Processes[i].memory) {
+                Processes[i].allocated = j;
+                Blocks[j].allocated = true;
+                startindex = j + 1;
+                cout << "Process " << Processes[i].id << " -> Block " << Blocks[j].index << " (" << Blocks[j].size << ")" << endl;
                 break;
             }
         }
-
-        if (!allocated) {
-            cout << "Process " << p.id << " not allocated\n";
-        }
+        if (Processes[i].allocated == -1)
+            cout << "Process " << Processes[i].id << " Unallocated" << endl;
     }
 }
 
-// Best Fit Allocation
-void bestFit(vector<Block>& blocks, vector<Process>& processes) {
-    cout << "\nBest Fit Allocation:\n";
-    for (auto& p : processes) {
-        p.allocatedBlockPos = -1;
-        int bestBlockPos = -1;
-        int bestSize = INT_MAX;
-
-        for (int i = 0; i < (int)blocks.size(); ++i) {
-            if (!blocks[i].allocated && blocks[i].size >= p.memory && blocks[i].size < bestSize) {
-                bestSize = blocks[i].size;
-                bestBlockPos = i;
+void bestfit(vector<Block> &Blocks, vector<Process> &Processes) {
+    for (int i = 0; i < Processes.size(); i++) {
+        int bestblockpos = -1, bestsize = INT_MAX;
+        Processes[i].allocated = -1;
+        for (int j = 0; j < Blocks.size(); j++) {
+            if (!Blocks[j].allocated && Blocks[j].size >= Processes[i].memory && Blocks[j].size < bestsize) {
+                bestblockpos = j;
+                bestsize = Blocks[j].size;
             }
         }
-
-        if (bestBlockPos != -1) {
-            blocks[bestBlockPos].allocated = true;
-            p.allocatedBlockPos = bestBlockPos;
-            cout << "Process " << p.id << " allocated to Block of size " << blocks[bestBlockPos].size << "\n";
-        } else {
-            cout << "Process " << p.id << " not allocated\n";
-        }
+        if (bestblockpos != -1) {
+            Blocks[bestblockpos].allocated = true;
+            Processes[i].allocated = bestblockpos;
+            cout << "Process " << Processes[i].id << " -> Block " << Blocks[bestblockpos].index << " (" << Blocks[bestblockpos].size << ")" << endl;
+        } else
+            cout << "Process " << Processes[i].id << " Unallocated" << endl;
     }
 }
 
-// Worst Fit Allocation
-void worstFit(vector<Block>& blocks, vector<Process>& processes) {
-    cout << "\nWorst Fit Allocation:\n";
-    for (auto& p : processes) {
-        p.allocatedBlockPos = -1;
-        int worstBlockPos = -1;
-        int worstSize = -1;
-
-        for (int i = 0; i < (int)blocks.size(); ++i) {
-            if (!blocks[i].allocated && blocks[i].size >= p.memory && blocks[i].size > worstSize) {
-                worstSize = blocks[i].size;
-                worstBlockPos = i;
+void worstfit(vector<Block> &Blocks, vector<Process> &Processes) {
+    for (int i = 0; i < Processes.size(); i++) {
+        int worstblockpos = -1, worstsize = INT_MIN;
+        Processes[i].allocated = -1;
+        for (int j = 0; j < Blocks.size(); j++) {
+            if (!Blocks[j].allocated && Blocks[j].size >= Processes[i].memory && Blocks[j].size > worstsize) {
+                worstblockpos = j;
+                worstsize = Blocks[j].size;
             }
         }
-
-        if (worstBlockPos != -1) {
-            blocks[worstBlockPos].allocated = true;
-            p.allocatedBlockPos = worstBlockPos;
-            cout << "Process " << p.id << " allocated to Block of size " << blocks[worstBlockPos].size << "\n";
-        } else {
-            cout << "Process " << p.id << " not allocated\n";
-        }
+        if (worstblockpos != -1) {
+            Blocks[worstblockpos].allocated = true;
+            Processes[i].allocated = worstblockpos;
+            cout << "Process " << Processes[i].id << " -> Block " << Blocks[worstblockpos].index << " (" << Blocks[worstblockpos].size << ")" << endl;
+        } else
+            cout << "Process " << Processes[i].id << " Unallocated" << endl;
     }
 }
 
 int main() {
-    int numBlocks, numProcesses;
-
-    // Input memory blocks
-    cout << "Enter number of memory blocks: ";
-    cin >> numBlocks;
-    vector<Block> blocks(numBlocks);
-
-    cout << "Enter sizes of each block:\n";
-    for (int i = 0; i < numBlocks; ++i) {
+    int nb, np;
+    cout << "Enter number of blocks:" << endl;
+    cin >> nb;
+    vector<Block> blocks(nb);
+    for (int i = 0; i < nb; i++) {
+        cout << "Enter size of block " << i + 1 << ":" << endl;
         cin >> blocks[i].size;
-        blocks[i].index = i;
+        blocks[i].index = i + 1;
         blocks[i].allocated = false;
     }
 
-    // Input processes
-    cout << "\nEnter number of processes: ";
-    cin >> numProcesses;
-    vector<Process> processes(numProcesses);
-
-    cout << "Enter memory requirement for each process:\n";
-    for (int i = 0; i < numProcesses; ++i) {
-        processes[i].id = i + 1;
+    cout << "Enter number of processes:" << endl;
+    cin >> np;
+    vector<Process> processes(np);
+    for (int i = 0; i < np; i++) {
+        cout << "Enter memory required by process " << i + 1 << ":" << endl;
         cin >> processes[i].memory;
+        processes[i].id = i + 1;
+        processes[i].allocated = -1;
     }
 
-    // Make copies for each allocation strategy
-    auto blocksFF = blocks;
-    auto blocksNF = blocks;
-    auto blocksBF = blocks;
-    auto blocksWF = blocks;
+    auto blocksFF = blocks, blocksNF = blocks, blocksBF = blocks, blocksWF = blocks;
+    auto processesFF = processes, processesNF = processes, processesBF = processes, processesWF = processes;
 
-    auto processesFF = processes;
-    auto processesNF = processes;
-    auto processesBF = processes;
-    auto processesWF = processes;
-
-    // Perform allocations
-    firstFit(blocksFF, processesFF);
-    nextFit(blocksNF, processesNF);
-    bestFit(blocksBF, processesBF);
-    worstFit(blocksWF, processesWF);
+    cout << "\nFirst Fit:" << endl;
+    firstfit(blocksFF, processesFF);
+    cout << "\nNext Fit:" << endl;
+    nextfit(blocksNF, processesNF);
+    cout << "\nBest Fit:" << endl;
+    bestfit(blocksBF, processesBF);
+    cout << "\nWorst Fit:" << endl;
+    worstfit(blocksWF, processesWF);
 
     return 0;
 }

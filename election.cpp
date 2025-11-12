@@ -3,14 +3,21 @@
 #include <algorithm>
 using namespace std;
 
-// ----------- Ring Election -----------
-void ringElection(const vector<int>& processes, const vector<bool>& alive, int initiator) {
+// -----------------------------------------------------
+//                RING ELECTION ALGORITHM
+// -----------------------------------------------------
+void ringElection(const vector<int> &processes, const vector<bool> &alive, int initiator)
+{
     int n = processes.size();
     int startIdx = -1;
-    for (int i = 0; i < n; ++i)
-        if (processes[i] == initiator) startIdx = i;
 
-    if (startIdx == -1 || !alive[startIdx]) {
+    // Find the index of initiator
+    for (int i = 0; i < n; ++i)
+        if (processes[i] == initiator)
+            startIdx = i;
+
+    if (startIdx == -1 || !alive[startIdx])
+    {
         cout << "Initiator is not alive or does not exist. Cannot start election.\n";
         return;
     }
@@ -18,26 +25,36 @@ void ringElection(const vector<int>& processes, const vector<bool>& alive, int i
     cout << "\n--- Ring Election Started ---\n";
     vector<int> token;
     int i = startIdx;
-    do {
-        if (alive[i]) {
+
+    // Pass the token around the ring once
+    do
+    {
+        if (alive[i])
+        {
             cout << "Process " << processes[i] << " adds its ID to token.\n";
             token.push_back(processes[i]);
-        } else {
+        }
+        else
+        {
             cout << "Process " << processes[i] << " is DOWN, token skipped.\n";
         }
         i = (i + 1) % n;
     } while (i != startIdx);
 
+    // Highest ID becomes coordinator
     cout << "\nToken contains IDs: ";
-    for (int id : token) cout << id << " ";
+    for (int id : token)
+        cout << id << " ";
     cout << endl;
 
     int coordinator = *max_element(token.begin(), token.end());
     cout << "\nCoordinator selected: " << coordinator << endl;
 
+    // Announce the coordinator
     cout << "\n--- Announcing Coordinator ---\n";
     i = startIdx;
-    do {
+    do
+    {
         if (alive[i])
             cout << "Process " << processes[i] << " acknowledges coordinator " << coordinator << endl;
         i = (i + 1) % n;
@@ -46,51 +63,71 @@ void ringElection(const vector<int>& processes, const vector<bool>& alive, int i
     cout << "--- Ring Election Ended ---\n";
 }
 
-// ----------- Bully Election -----------
-void bullyElection(const vector<int>& processes, const vector<bool>& alive, int initiator) {
+// -----------------------------------------------------
+//               CORRECT BULLY ELECTION ALGORITHM
+// -----------------------------------------------------
+void bullyElection(const vector<int> &processes, const vector<bool> &alive, int initiator)
+{
     int n = processes.size();
-    int starterIdx = -1;
-    for (int i = 0; i < n; ++i)
-        if (processes[i] == initiator) starterIdx = i;
+    int startIdx = -1;
 
-    if (starterIdx == -1 || !alive[starterIdx]) {
-        cout << "Starter is not alive or does not exist. Cannot start election.\n";
+    // Find initiator index
+    for (int i = 0; i < n; ++i)
+        if (processes[i] == initiator)
+            startIdx = i;
+
+    if (startIdx == -1 || !alive[startIdx])
+    {
+        cout << "Initiator is not alive or does not exist. Cannot start election.\n";
         return;
     }
 
     cout << "\n--- Bully Election Started ---\n";
-    int currentId = initiator;
+
+    int current = initiator;
     int coordinator = -1;
 
-    while (true) {
-        cout << "\nProcess " << currentId << " starts election.\n";
-        vector<int> higherResponders;
+    while (true)
+    {
+        cout << "\nProcess " << current << " initiates an election.\n";
+        bool foundHigherAlive = false;
+        int currentIdx = find(processes.begin(), processes.end(), current) - processes.begin();
 
-        for (int i = 0; i < n; ++i) {
-            if (processes[i] > currentId) {
-                cout << "Message sent to Process " << processes[i];
-                if (alive[i]) {
-                    cout << " (ALIVE, RESPONDS)";
-                    higherResponders.push_back(processes[i]);
-                } else {
-                    cout << " (DOWN)";
+        // Process sends election messages to higher processes only
+        for (int i = currentIdx + 1; i < n; ++i)
+        {
+            if (processes[i] > current)
+            {
+                cout << "  Message sent from Process " << current << " to Process " << processes[i];
+                if (alive[i])
+                {
+                    cout << " → ALIVE (Responds)";
+                    foundHigherAlive = true;
+                    current = processes[i]; // Higher alive process takes over
+                    cout << "\nProcess " << current << " takes over the election.\n";
+                    break; // ✅ stop as soon as first higher alive found
+                }
+                else
+                {
+                    cout << " → DOWN";
                 }
                 cout << endl;
             }
         }
 
-        if (higherResponders.empty()) {
-            coordinator = currentId;
+        // If no higher alive process found, current becomes coordinator
+        if (!foundHigherAlive)
+        {
+            coordinator = current;
             break;
-        } else {
-            currentId = *max_element(higherResponders.begin(), higherResponders.end());
-            cout << "Process " << currentId << " will take over election.\n";
         }
     }
 
+    // Announce coordinator
     cout << "\nCoordinator selected: " << coordinator << endl;
     cout << "\n--- Announcing Coordinator ---\n";
-    for (int i = 0; i < n; ++i) {
+    for (int i = 0; i < n; ++i)
+    {
         if (alive[i])
             cout << "Process " << processes[i] << " acknowledges coordinator " << coordinator << endl;
         else
@@ -100,8 +137,11 @@ void bullyElection(const vector<int>& processes, const vector<bool>& alive, int 
     cout << "--- Bully Election Ended ---\n";
 }
 
-// ---------------- Main ----------------
-int main() {
+// -----------------------------------------------------
+//                       MAIN
+// -----------------------------------------------------
+int main()
+{
     int n;
     cout << "Enter number of processes: ";
     cin >> n;
@@ -110,11 +150,14 @@ int main() {
     vector<bool> alive(n);
 
     cout << "Enter process IDs (space separated): ";
-    for (int i = 0; i < n; ++i) cin >> processes[i];
+    for (int i = 0; i < n; ++i)
+        cin >> processes[i];
 
     cout << "Enter status for each process (1 = alive, 0 = down): ";
-    for (int i = 0; i < n; ++i) {
-        int s; cin >> s;
+    for (int i = 0; i < n; ++i)
+    {
+        int s;
+        cin >> s;
         alive[i] = (s == 1);
     }
 
@@ -126,9 +169,12 @@ int main() {
     int choice;
     cin >> choice;
 
-    if (choice == 1) ringElection(processes, alive, initiator);
-    else if (choice == 2) bullyElection(processes, alive, initiator);
-    else cout << "Invalid choice.\n";
+    if (choice == 1)
+        ringElection(processes, alive, initiator);
+    else if (choice == 2)
+        bullyElection(processes, alive, initiator);
+    else
+        cout << "Invalid choice.\n";
 
     return 0;
 }

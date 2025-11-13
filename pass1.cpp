@@ -21,7 +21,7 @@ struct Pool
     string litno;
 };
 
-OP optab[] = {
+OP optab[18] = {
     {"STOP", "IS", "00"}, {"ADD", "IS", "01"}, {"SUB", "IS", "02"}, {"MULT", "IS", "03"}, {"MOVER", "IS", "04"}, {"MOVEM", "IS", "05"}, {"COMP", "IS", "06"}, {"BC", "IS", "07"}, {"DIV", "IS", "08"}, {"READ", "IS", "09"}, {"PRINT", "IS", "10"}, {"START", "AD", "01"}, {"END", "AD", "02"}, {"ORIGIN", "AD", "03"}, {"EQU", "AD", "04"}, {"LTORG", "AD", "05"}, {"DC", "DL", "01"}, {"DS", "DL", "02"}};
 
 Sym ST[50];
@@ -86,7 +86,7 @@ bool isNumber(const string &s)
 
 int main()
 {
-    ifstream fin("input.txt");
+    ifstream fin("exampass1input.txt");
     ofstream ic("ic.txt"), st("symtable.txt"), lt("littable.txt");
 
     string label, opcode, op1, op2;
@@ -127,29 +127,40 @@ int main()
         {
             string token1, token2;
             char op;
-            size_t found = op1.find('+');
-            op = (found != string::npos) ? '+' : '-';
+
+            int pos = op1.find('+'); // find only '+'
+            if (pos != -1)
+                op = '+';
+            else
+                op = '-';
+
             stringstream ss(op1);
             getline(ss, token1, op);
             getline(ss, token2);
+
+            int symID = getSymID(token1);
+            int symAddr = stoi(ST[symID].addr);
+            int offset = stoi(token2);
+
             if (op == '+')
-                LC = stoi(ST[getSymID(token1)].addr) + stoi(token2);
+                LC = symAddr + offset;
             else
-                LC = stoi(ST[getSymID(token1)].addr) - stoi(token2);
-            IC += "(S,0" + to_string(ST[getSymID(token1)].no) + ")" + op + token2;
+                LC = symAddr - offset;
+
+            IC = "(S,0" + to_string(ST[symID].no) + ")" + op + token2;
+
             ic << lc << "\t" << IC << endl;
+
             continue;
         }
 
         // EQU
         if (opcode == "EQU")
         {
-            string addr = ST[getSymID(op1)].addr;
-            if (presentST(label))
-                ST[getSymID(label)].addr = addr;
-            else
-                ST[scnt++] = {scnt, label, addr};
-            IC += "(S,0" + to_string(ST[getSymID(op1)].no) + ")";
+            int opid = getSymID(op1);
+            int labelid = getSymID(label);
+            ST[labelid].addr = ST[opid].addr;
+            IC += "(S," + to_string(ST[opid].no) + ")";
             ic << lc << "\t" << IC << endl;
             continue;
         }
@@ -170,7 +181,9 @@ int main()
             nlcnt = 0;
             poolStartIndex = lcnt;
             if (opcode == "END")
+            {
                 break;
+            }
             continue;
         }
 
@@ -195,6 +208,13 @@ int main()
             {
                 if (opcode == "BC")
                     IC += "(" + to_string(cond[op1]) + ")";
+                else if (opcode == "READ" || opcode == "PRINT")
+                {
+                    if (!presentST(op1))
+                        ST[scnt++] = {scnt, op1, "0"};
+                    IC += "(S,0" + to_string(getSymID(op1)) + ")";
+                }
+
                 else if (op1 != "NAN")
                     IC += "(" + to_string(reg[op1]) + ")";
             }

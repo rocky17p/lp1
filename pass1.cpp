@@ -86,8 +86,8 @@ bool isNumber(const string &s)
 
 int main()
 {
-    ifstream fin("exampass1input.txt");
-    ofstream ic("ic.txt"), st("symtable.txt"), lt("littable.txt");
+    ifstream fin("input.txt");
+    ofstream ic("ic.txt"), st("symtable.txt"), lt("littable.txt"), pt("pooltable.txt");
 
     string label, opcode, op1, op2;
     int LC = 0;
@@ -177,7 +177,10 @@ int main()
                 ic << lc << "\t" << IC << endl;
             }
             if (nlcnt > 0)
-                PT[pcnt++] = {pcnt + 1, "#" + to_string(LT[lcnt - nlcnt].no)};
+            {
+                PT[pcnt] = {pcnt, "#" + to_string(LT[lcnt - nlcnt].no)};
+                pcnt++;
+            }
             nlcnt = 0;
             poolStartIndex = lcnt;
             if (opcode == "END")
@@ -251,6 +254,9 @@ int main()
 
     for (int i = 0; i < lcnt; i++)
         lt << LT[i].no << "\t" << LT[i].name << "\t" << LT[i].addr << endl;
+
+    for (int i = 0; i < pcnt; i++)
+        pt << PT[i].no << "\t" << PT[i].litno << endl;
 
     return 0;
 }

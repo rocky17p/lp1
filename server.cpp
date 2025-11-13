@@ -2,18 +2,20 @@
 #include <arpa/inet.h>
 #include <netinet/in.h>
 #include <unistd.h>
+#include<thread>
 using namespace std;
 
-int add(int a, int b) return { a + b };
-int sub(int a, int b) return { a - b };
-void handleclient(int clientdescriptor)
+int add(int a, int b) { return a + b; }
+int sub(int a, int b) { return a - b; }
+
+void handleclient(int client)
 {
     char func;
     int a, b;
 
-    read(clientdescriptor, &func, sizeof(func));
-    read(clientdescriptor, &a, sizeof(a));
-    read(clientdescriptor, &b, sizeof(b));
+    read(client, &func, sizeof(func));
+    read(client, &a, sizeof(a));
+    read(client, &b, sizeof(b));
 
     int result;
     if (func == 'a')
@@ -25,8 +27,8 @@ void handleclient(int clientdescriptor)
         result = sub(a, b);
     }
 
-    write(clientdescriptor, &result, sizeof(result));
-    close(clientdescriptor);
+    write(client, &result, sizeof(result));
+    close(client);
 }
 int main()
 {
@@ -42,9 +44,8 @@ int main()
 
     while (true)
     {
-        int clientdescriptor = accept(sd, null, null);
-        thread(handleclient, clientdescriptor).detach();
+        int client = accept(sd, NULL, NULL);
+        thread(handleclient, client).detach();
     }
     close(sd);
-    return 0;
 }

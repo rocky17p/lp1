@@ -1,11 +1,5 @@
-#include <iostream>
-#include <vector>
-#include <algorithm>
+#include<bits/stdc++.h>
 using namespace std;
-
-// -----------------------------------------------------
-//                RING ELECTION ALGORITHM
-// -----------------------------------------------------
 void ringElection(const vector<int> &processes, const vector<bool> &alive, int initiator)
 {
     int n = processes.size();
@@ -63,9 +57,6 @@ void ringElection(const vector<int> &processes, const vector<bool> &alive, int i
     cout << "--- Ring Election Ended ---\n";
 }
 
-// -----------------------------------------------------
-//               CORRECT BULLY ELECTION ALGORITHM
-// -----------------------------------------------------
 void bullyElection(const vector<int> &processes, const vector<bool> &alive, int initiator)
 {
     int n = processes.size();
@@ -83,63 +74,62 @@ void bullyElection(const vector<int> &processes, const vector<bool> &alive, int 
     }
 
     cout << "\n--- Bully Election Started ---\n";
+    cout << "Process " << initiator << " detects that coordinator is down.\n";
 
     int current = initiator;
     int coordinator = -1;
 
+    // Everything inside one continuous loop
     while (true)
     {
         cout << "\nProcess " << current << " initiates an election.\n";
-        bool foundHigherAlive = false;
-        int currentIdx = find(processes.begin(), processes.end(), current) - processes.begin();
+        bool higherFound = false;
+        int next = -1;
 
-        // Process sends election messages to higher processes only
-        for (int i = currentIdx + 1; i < n; ++i)
+        // Send election message to all higher processes
+        for (int i = 0; i < n; ++i)
         {
             if (processes[i] > current)
             {
-                cout << "  Message sent from Process " << current << " to Process " << processes[i];
+                cout << "  Process " << current << " -> sends ELECTION to Process " << processes[i];
                 if (alive[i])
                 {
-                    cout << " → ALIVE (Responds)";
-                    foundHigherAlive = true;
-                    current = processes[i]; // Higher alive process takes over
-                    cout << "\nProcess " << current << " takes over the election.\n";
-                    break; // ✅ stop as soon as first higher alive found
+                    cout << " -> ALIVE (Responds OK)\n";
+                    higherFound = true;
+                    next = processes[i]; // first higher alive process takes over
+                    break;               // stop after first alive higher process
                 }
                 else
                 {
-                    cout << " → DOWN";
+                    cout << " -> DOWN\n";
                 }
-                cout << endl;
             }
         }
 
-        // If no higher alive process found, current becomes coordinator
-        if (!foundHigherAlive)
+        if (!higherFound)
         {
             coordinator = current;
-            break;
+            break; // no higher alive found, so this one becomes coordinator
         }
+
+        // Pass control to next higher alive process
+        current = next;
     }
 
-    // Announce coordinator
-    cout << "\nCoordinator selected: " << coordinator << endl;
-    cout << "\n--- Announcing Coordinator ---\n";
+    cout << "\n=> Process " << coordinator << " becomes the new COORDINATOR.\n";
+
+    // Announce the coordinator
+    cout << "\n--- Announcing COORDINATOR ---\n";
     for (int i = 0; i < n; ++i)
     {
         if (alive[i])
-            cout << "Process " << processes[i] << " acknowledges coordinator " << coordinator << endl;
+            cout << "Process " << processes[i] << " acknowledges Coordinator " << coordinator << endl;
         else
-            cout << "Process " << processes[i] << " is DOWN and misses announcement.\n";
+            cout << "Process " << processes[i] << " is DOWN and misses the announcement.\n";
     }
 
     cout << "--- Bully Election Ended ---\n";
 }
-
-// -----------------------------------------------------
-//                       MAIN
-// -----------------------------------------------------
 int main()
 {
     int n;

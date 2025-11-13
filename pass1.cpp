@@ -147,7 +147,7 @@ int main()
             else
                 LC = symAddr - offset;
 
-            IC = "(S,0" + to_string(ST[symID].no) + ")" + op + token2;
+            IC += "(S,0" + to_string(ST[symID].no) + ")" + op + token2;
 
             ic << lc << "\t" << IC << endl;
 
